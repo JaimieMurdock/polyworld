@@ -18,22 +18,22 @@ genome          plots average gene value over time
 movie           creates movie
 scatter         creates a scatter plot of metrics against time (like plotgenome, but with data points)
 """
+import agent.visualization
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Visualizes Polyworld run data.",
-        epilog="""
-        Modes:
-
-        population      produces a 
-        """)
+    parser = ArgumentParser(parents=[agent.visualization.Parser],
+        description="Visualizes Polyworld run data.")
 
 
     parser.add_argument('mode', help='set the mode', 
         choices=['population'])
-    parser.add_argument('--run', dest='run_dir', action='store', 
-        default='../run/', help="set the run directory (default: '../run/')")
-    parser.add_argument('-c', '--cluster', dest='cluster', action='store',
-        help="set the cluster data file")
 
     args = parser.parse_args()
+
+    
+
+    if args.mode == 'population':
+        agent.visualization.population.main(args.run_dir, args.cluster_file)
+    else:
+        raise NotImplementedError
