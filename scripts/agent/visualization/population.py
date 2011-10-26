@@ -27,30 +27,43 @@ pylab.rcParams.update(params)
 from agent import *
 import readcluster as rc
 from collections import defaultdict
+from itertools import repeat
 
-def plot(cluster, filename="plot.png", func=lambda a: a.id, 
+def plot(cluster_file, filename="plot.png", func=lambda a: a.id, 
          plot_title='', cmap='Paired', filter=lambda a: True, 
-         draw_legend=False, radius='2.25', sym=None):
-    ac = rc.load(cluster)
-    clusters = rc.load_clusters(cluster)
+         draw_legend=False, radius='2.25', sym=None, run_dir='../run/'):
+    """
+    Creates a line plot showing population per cluster
+    """
 
-    p = get_population()
-    pops = [0 for i in range(30000)]
+    # retrieve cluster data from cluster file
+    ac = rc.load(cluster_file)
+    clusters = rc.load_clusters(cluster_file)
+
+    # grab cluster population
+    p = get_population(run_dir=run_dir)
+
+    # initialize some variables
     cluster_pops = [] 
     cluster_pop_max = []
-    for clust in range(len(clusters)):
-        cluster_pops.append(pops[:])
-        cluster_pop_max.append([0,0,-1,0])
-
     for clust,agents in enumerate(clusters):
+        cluster_pops.append(repeat(0, 30000))
+        # maxPop, peak, start, stop
+        cluster_pop_max.append([0,0,-1,0])
         for agent in agents:
             a = Agent(agent)
             for i in range(a.birth, a.death):
                 cluster_pops[clust][i] += 1
+                
+                # set cluster start
                 if cluster_pop_max[clust][2] == -1:
                     cluster_pop_max[clust][2] = i
+
+                # set cluster stop
                 if i > cluster_pop_max[clust][3]:
                     cluster_pop_max[clust][3] = i
+
+                # set max Population
                 if cluster_pops[clust][i] > cluster_pop_max[clust][0]:
                     cluster_pop_max[clust][0] = cluster_pops[clust][i]
                     cluster_pop_max[clust][1] = i
@@ -83,6 +96,11 @@ def plot(cluster, filename="plot.png", func=lambda a: a.id,
         print clust, len(agents), cluster_pop_max[clust][2], cluster_pop_max[clust][1], cluster_pop_max[clust][3]+1, cluster_pop_max[clust][0]
 
 
+def main(run_dir, cluster_file):
+    outfile = "plot.png"
+    plot(cluster_file, filename=outfile, draw_legend=False, run_dir=run_dir)
+    
+
 if __name__ == '__main__':
     import sys
     from optparse import OptionParser
@@ -110,7 +128,5 @@ if __name__ == '__main__':
     outfile = "%s.pdf" % root
 
     #title = os.path.basename(cluster)[5:].rsplit('.',1)[0]
-
     plot(cluster, filename=outfile, draw_legend=False, radius=options.radius,
          sym=options.sym)
-
