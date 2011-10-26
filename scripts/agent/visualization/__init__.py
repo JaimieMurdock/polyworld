@@ -1,4 +1,4 @@
-import agent.visualization.population as population
+import population
 
 from argparse import ArgumentParser as _Parser
 Parser = _Parser(add_help=False)

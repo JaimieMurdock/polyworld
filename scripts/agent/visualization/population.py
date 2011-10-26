@@ -47,7 +47,7 @@ def plot(cluster_file, filename="plot.png", func=lambda a: a.id,
     cluster_pops = [] 
     cluster_pop_max = []
     for clust,agents in enumerate(clusters):
-        cluster_pops.append(repeat(0, 30000))
+        cluster_pops.append(list(repeat(0, 30000)))
         # maxPop, peak, start, stop
         cluster_pop_max.append([0,0,-1,0])
         for agent in agents:
