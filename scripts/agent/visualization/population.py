@@ -37,7 +37,6 @@ def plot(cluster_file, filename="plot.png", func=lambda a: a.id,
     """
 
     # retrieve cluster data from cluster file
-    ac = rc.load(cluster_file)
     clusters = rc.load_clusters(cluster_file)
 
     # grab cluster population
