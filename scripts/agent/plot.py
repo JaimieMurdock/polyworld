@@ -61,6 +61,7 @@ def plot_step(t, p, cluster, n_clusters, output_dir='anim', cmap='gist_earth', d
     xs, ys, ss, cs = [[], [], [], []]
     nxs, nys, nss, ncs = [[], [], [], []]
     for a in p_t:
+        print a.id, a.birth, a.death, a.death_reason, a.positions
         if a.complexity:
             xs.append(a.positions[t][0])
             ys.append(a.positions[t][2])
@@ -75,7 +76,8 @@ def plot_step(t, p, cluster, n_clusters, output_dir='anim', cmap='gist_earth', d
     # create position graph
     if nxs != []:
         pos.scatter(nxs, nys, s=nss, alpha=0.75, cmap=cmap, c=ncs, norm=norm, marker='s')
-    pos.scatter(xs, ys, s=ss, alpha=0.75, cmap=cmap, c=cs, norm=norm, marker='o')
+    if xs != []:
+        pos.scatter(xs, ys, s=ss, alpha=0.75, cmap=cmap, c=cs, norm=norm, marker='o')
     pos.set_title('agent positions at time %d' % t)
     pos.grid(True)
 
