@@ -43,30 +43,13 @@ def plot(cluster_file, filename="plot.png", func=lambda a: a.id,
     # grab cluster population
     p = get_population(run_dir=run_dir)
 
-    # initialize some variables
     cluster_pops = [] 
-    cluster_pop_max = []
     for clust,agents in enumerate(clusters):
         cluster_pops.append(list(repeat(0, 30000)))
-        # maxPop, peak, start, stop
-        cluster_pop_max.append([0,0,-1,0])
         for agent in agents:
             a = Agent(agent)
             for i in range(a.birth, a.death):
                 cluster_pops[clust][i] += 1
-                
-                # set cluster start
-                if cluster_pop_max[clust][2] == -1:
-                    cluster_pop_max[clust][2] = i
-
-                # set cluster stop
-                if i > cluster_pop_max[clust][3]:
-                    cluster_pop_max[clust][3] = i
-
-                # set max Population
-                if cluster_pops[clust][i] > cluster_pop_max[clust][0]:
-                    cluster_pop_max[clust][0] = cluster_pops[clust][i]
-                    cluster_pop_max[clust][1] = i
     
     lines=[]
     for i,clust in enumerate(cluster_pops):
@@ -79,8 +62,6 @@ def plot(cluster_file, filename="plot.png", func=lambda a: a.id,
                                     for i,clust in enumerate(clusters)], 
                         'center right', 
                         ncol=((len(clusters)/35)+1), prop=dict(size=6))
-    else:
-        print "should not draw!!!"
 
     title = r"Cluster Population ($\epsilon$ = %s, %d clusters)" % (radius, len(clusters))
     pylab.title(title, weight='black')
@@ -91,9 +72,6 @@ def plot(cluster_file, filename="plot.png", func=lambda a: a.id,
 
     pylab.savefig(filename, dpi=300)
 
-    print 'cluster, totalPop, start, peak, stop, maxPop'
-    for clust,agents in enumerate(clusters):
-        print clust, len(agents), cluster_pop_max[clust][2], cluster_pop_max[clust][1], cluster_pop_max[clust][3]+1, cluster_pop_max[clust][0]
 
 
 def main(run_dir, cluster_file):
