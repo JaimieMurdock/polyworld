@@ -43,23 +43,22 @@ def plot(cluster_file, filename="plot.png", func=lambda a: a.id,
     # grab cluster population
     p = get_population(run_dir=run_dir)
 
-    cluster_pops = [] 
-    for clust,agents in enumerate(clusters):
-        cluster_pops.append(list(repeat(0, 30000)))
+    lines=[]
+    for cluster, agents in enumerate(clusters):
+        pop_by_time = list(repeat(0, 30000))
         for agent in agents:
             a = Agent(agent)
             for i in range(a.birth, a.death):
-                cluster_pops[clust][i] += 1
+                pop_by_time[i] += 1
     
-    lines=[]
-    for i,clust in enumerate(cluster_pops):
-        lines.append(pylab.plot(range(30000),clust, 
-                         label=("%d: k=%d" % (i, len(clusters[i]))),
-                         color=pylab.cm.Paired(float(i)/len(clusters))))
+        lines.append(
+            pylab.plot(range(30000), pop_by_time, 
+                       label=("%d: k=%d" % (i, len(clusters[cluster]))),
+                       color=pylab.cm.Paired(float(cluster)/len(clusters))))
 
     if draw_legend:
-        pylab.figlegend(lines, ["%d: k=%d" % (i, len(clust))
-                                    for i,clust in enumerate(clusters)], 
+        pylab.figlegend(lines, ["%d: k=%d" % (i, len(cluster))
+                                    for i,cluster in enumerate(clusters)], 
                         'center right', 
                         ncol=((len(clusters)/35)+1), prop=dict(size=6))
 
