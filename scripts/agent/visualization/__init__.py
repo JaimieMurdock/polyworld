@@ -1,4 +1,5 @@
 import population
+import movie
 
 from argparse import ArgumentParser as _Parser
 Parser = _Parser(add_help=False)

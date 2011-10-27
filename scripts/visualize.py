@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
 
     parser.add_argument('mode', help='set the mode', 
-        choices=['population'])
+        choices=['population', 'movie'])
 
     args = parser.parse_args()
 
@@ -35,5 +35,7 @@ if __name__ == '__main__':
 
     if args.mode == 'population':
         agent.visualization.population.main(args.run_dir, args.cluster_file)
+    elif args.mode == 'movie':
+        agent.visualization.movie.main(args.run_dir, args.cluster_file)
     else:
         raise NotImplementedError
