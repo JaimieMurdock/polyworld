@@ -10,12 +10,12 @@ import subprocess
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.ticker import NullFormatter
 from matplotlib.colors import Normalize
 
 from agent import *
-from agent.plot import plot_step
 import readcluster as rc
-
 
 def plot(cluster_file, run_dir='../run/', anim_path=None, frame_path=None,
          min_size=None):
@@ -47,7 +47,7 @@ def plot(cluster_file, run_dir='../run/', anim_path=None, frame_path=None,
     #cluster = manager.dict(agent_cluster)
 
     start = 1 
-    stop = 30000
+    stop = 300
     
     # grouping to keep memory footprint reasonably small.
     # TODO: Fix this using iterators and multiprocessing.Pool(). Running into
@@ -87,6 +87,96 @@ def compress_clusters(clusters, min_size=700):
     new_clusters.append(misc_cluster)
     
     return new_clusters 
+
+def plot_step(t, p, cluster, n_clusters, output_dir='anim', cmap='gist_earth', debug=False):
+    ''' Function to plot the motion of a given population at a given timestep
+    with cluster information. '''
+
+    norm = Normalize(0,n_clusters)
+    # grab agents alive at time t
+    p_t = [a for a in p if a.alive_at_timestep(t)] 
+    
+    # set up bounds for histogram and main window
+    left, width = 0.1, 0.6
+    bottom, height = 0.4, 0.6
+    bottom_h = left_h = left+width+0.05
+    
+    left, right = 0.1, 0.9
+    bottom, top = 0.35, 0.95
+    width = right-left
+    height = top-bottom
+
+    hist_bottom = 0.05
+    hist_height = 0.2
+
+    # create position arguments for graph figures
+    sq_scatter = [left, bottom, width, height]
+    rect_histx = [left, hist_bottom, width, hist_height]
+     
+    # configure figure dimensions and position and histogram objects
+    fig = plt.figure(figsize=(6,8))
+    pos = plt.axes(sq_scatter)
+    hist = plt.axes(rect_histx)
+
+    # Eliminate labels for both axes of the position graph. 
+    # Eliminate x-axis labels for the histogram.
+    nullfmt = NullFormatter()
+    pos.xaxis.set_major_formatter(nullfmt)
+    pos.yaxis.set_major_formatter(nullfmt)
+    hist.yaxis.set_major_formatter(nullfmt)
+
+    # set up 4 lists for x-pos, y-pos, size and color
+    xs, ys, ss, cs = [[], [], [], []]
+    nxs, nys, nss, ncs = [[], [], [], []]
+    for a in p_t:
+        if a.complexity:
+            xs.append(a.positions[t][0])
+            ys.append(a.positions[t][2])
+            cs.append(cluster[a.id])
+            ss.append(a.complexity*240)
+        else:
+            nxs.append(a.positions[t][0])
+            nys.append(a.positions[t][2])
+            ncs.append(cluster[a.id])
+            nss.append(50)
+
+    # create position graph
+    if nxs != []:
+        pos.scatter(nxs, nys, s=nss, alpha=0.75, cmap=cmap, c=ncs, norm=norm, marker='s')
+    if xs != []:
+        pos.scatter(xs, ys, s=ss, alpha=0.75, cmap=cmap, c=cs, norm=norm, marker='o')
+    pos.set_title('agent positions at time %d' % t)
+    pos.grid(True)
+
+
+    if ncs:
+        cs.extend(ncs)
+    # initialize histogram
+    N, bins, patches = hist.hist(cs, bins=range(n_clusters+1), orientation='horizontal')
+
+    # Set histogram colors. Technique adapted from:
+    # http://matplotlib.sourceforge.net/examples/pylab_examples/hist_colormapped.html
+    cmap = getattr(cm, cmap)
+    for i, patch in enumerate(patches):
+        color = cmap(i/float(len(N)))
+        patch.set_facecolor(color)
+    hist.set_title('cluster populations')
+    hist.set_ylim(0,n_clusters,auto=False) # auto=False disables resizing
+    hist.set_xlim(0,250,auto=False)
+    hist.set_autoscalex_on(False)
+    hist.grid(True)
+   
+    # Write plot to file
+    plt.savefig("%s/step%05d.png" % (output_dir, t), dpi=100)
+
+    if debug:
+        print "wrote file %d" % t
+
+    #clear figure
+    plt.clf()
+
+    # ensure that memory is freed
+    del p_t, xs, ys, ss, cs
 
 if __name__ == '__main__':
     import sys
