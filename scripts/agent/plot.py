@@ -61,7 +61,6 @@ def plot_step(t, p, cluster, n_clusters, output_dir='anim', cmap='gist_earth', d
     xs, ys, ss, cs = [[], [], [], []]
     nxs, nys, nss, ncs = [[], [], [], []]
     for a in p_t:
-        print a.id, a.birth, a.death, a.death_reason, a.positions
         if a.complexity:
             xs.append(a.positions[t][0])
             ys.append(a.positions[t][2])
