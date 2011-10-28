@@ -18,7 +18,7 @@ genome          plots average gene value over time
 movie           creates movie
 scatter         creates a scatter plot of metrics against time (like plotgenome, but with data points)
 """
-import agent.visualization
+import agent.plot
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -34,8 +34,8 @@ if __name__ == '__main__':
     
 
     if args.mode == 'population':
-        agent.visualization.population.main(args.run_dir, args.cluster_file)
+        agent.plot.population.main(args.run_dir, args.cluster_file)
     elif args.mode == 'movie':
-        agent.visualization.movie.main(args.run_dir, args.cluster_file)
+        agent.plot.movie.main(args.run_dir, args.cluster_file)
     else:
         raise NotImplementedError
