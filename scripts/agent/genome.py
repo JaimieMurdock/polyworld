@@ -69,7 +69,8 @@ def entropy(frequencies):
 
 import string
 gene_index = []
-def get_label(gene, index_filename='../run/geneindex.txt', abbr=False):
+def get_label(gene, index_filename='../run/geneindex.txt', abbr=False,
+              length=None):
     '''Returns the label of a given gene index.'''
 
     # Lazy loading of gene index list.
@@ -84,7 +85,8 @@ def get_label(gene, index_filename='../run/geneindex.txt', abbr=False):
 
     label = gene_index[gene]
     if abbr:
-        label = ''.join([x for x in label if x in string.uppercase or
-                                             x in string.punctuation or
-                                             x in string.digits])
+        if not length or len(label) < length:
+            label = ''.join([x for x in label if x in string.uppercase or
+                                                 x in string.punctuation or
+                                                 x in string.digits])
     return label
