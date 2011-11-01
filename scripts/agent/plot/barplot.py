@@ -34,22 +34,23 @@ import readcluster as rc
 from math import log, sqrt 
 
 
-def plot(cluster, filename="fingerprints.pdf", funcs=(lambda a: a.id),
+def plot(cluster, funcs, labels, filename="fingerprints.pdf",
          plot_title='Scores by Cluster', cmap='Paired', filter=lambda a: True,
-         labels=('id'), plot_pop=False):
+         plot_pop=False, run_dir="../run/"):
     assert len(labels) == len(funcs), "must have a label for every func"
+
+    # load in cluster data
     ac = rc.load(cluster)
     clusters = rc.load_clusters(cluster)
+
+    # compress clusters
+    # TODO: replace with call to agent.cluster.compress(700)
     clusters = [[i, clust] for i,clust in enumerate(clusters) 
                     if len(clust) > 700]
     ids, clusters = zip(*clusters)
     num_clusters = len(clusters)
 
-    ind = np.arange(num_clusters)
-    if plot_pop:
-        width = 1.0 / (len(funcs) + 2)
-    else:
-        width = 1.0 / (len(funcs) + 1)
+    # build up cluster data
     data = [[np.average([func(a) for a in clust if filter(a)]) 
                 for clust in clusters]
                     for func in funcs]
@@ -58,10 +59,9 @@ def plot(cluster, filename="fingerprints.pdf", funcs=(lambda a: a.id),
                for clust in clusters]
                    for func in funcs]
 
-    if plot_pop:
-        data.append([len(clust) / 25346.0 for clust in clusters])
-        labels.append('population')
-
+    # plot actual bars for each function
+    ind = np.arange(num_clusters)
+    width = 1.0 / (len(funcs) + 1)
     bars = []
     for offset,datum in enumerate(data):
         b = bar(ind+(offset*width), datum, width,
@@ -69,6 +69,7 @@ def plot(cluster, filename="fingerprints.pdf", funcs=(lambda a: a.id),
                 yerr=err[offset], capsize=1.5)
         bars.append(b)
 
+    # generate final plot
     title(plot_title, weight='black')
     ylabel('Normalized Value', weight='bold')
     ylim(ymin=0,ymax=1.0)
@@ -80,6 +81,18 @@ def plot(cluster, filename="fingerprints.pdf", funcs=(lambda a: a.id),
 
     savefig(filename, dpi=200)
 
+def get_gene_fn(i):
+    return lambda x: Agent(x).genome[i] / 255.0
+
+def main(run_dir, cluster_file, genes=None):
+    if genes is None:
+        genes = [4,5,7,11]
+
+    funcs = [get_gene_fn(i) for i in genes]
+    labels = [genome.get_label(i, abbr=True) for i in genes]
+
+    plot(cluster_file, funcs, labels, 
+         plot_title="Representative Gene Values", run_dir=run_dir)
 
 if __name__ == '__main__':
     import sys
@@ -97,16 +110,4 @@ if __name__ == '__main__':
         print "Must specify a valid cluster file!"
         sys.exit()
 
-    plot(cluster, funcs=(lambda x: Agent(x).genome[4] / 255.0, 
-                         lambda x: Agent(x).genome[5] / 255.0,
-                         lambda x: Agent(x).genome[7] / 255.0,
-                         lambda x: Agent(x).genome[11] / 255.0,
-                         lambda x: Agent(x).complexity),
-         plot_title="Representative Gene Values and Complexity by Cluster",
-         labels=[genome.get_label(4),
-                 genome.get_label(5),
-                 "MEF",
-                 "INGC",
-                 'Complexity'
-                 ])
-
+    main('../run/', cluster)
