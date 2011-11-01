@@ -1,5 +1,6 @@
 import population
 import movie
+import barplot
 
 from argparse import ArgumentParser as _Parser
 Parser = _Parser(add_help=False)

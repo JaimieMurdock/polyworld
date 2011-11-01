@@ -22,12 +22,12 @@ import agent.plot
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
-    parser = ArgumentParser(parents=[agent.visualization.Parser],
+    parser = ArgumentParser(parents=[agent.plot.Parser],
         description="Visualizes Polyworld run data.")
 
 
     parser.add_argument('mode', help='set the mode', 
-        choices=['population', 'movie'])
+        choices=['population', 'movie', 'barplot'])
 
     args = parser.parse_args()
 
@@ -37,5 +37,7 @@ if __name__ == '__main__':
         agent.plot.population.main(args.run_dir, args.cluster_file)
     elif args.mode == 'movie':
         agent.plot.movie.main(args.run_dir, args.cluster_file)
+    elif args.mode == 'barplot':
+        agent.plot.barplot.main(args.run_dir, args.cluster_file)
     else:
         raise NotImplementedError
