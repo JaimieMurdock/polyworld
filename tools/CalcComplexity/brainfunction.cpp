@@ -48,10 +48,13 @@ int process_brainfunction(int argc, char *argv[])
 	part_names['B'] = "Behavior";
 	part_names['H'] = "Health";
 
+	// --- default values
+	bool bare = false;
+	int ignore_timesteps_after = 0;	// calculate complexity over the agent's entire lifetime.
+
 	// ---
 	// --- Process Command-Line Args
 	// ---
-	bool bare = false;
 
 	// --- get files to process
 	if(argc < 2 )
@@ -109,12 +112,10 @@ int process_brainfunction(int argc, char *argv[])
 
 		consume_arg(argc, argv, argi);
 	}
-
-
+	
 	// --- get optional timestep
-	int ignore_timesteps_after = 0;	// by default, calculate complexity over the agent's entire lifetime.
 
-	if(isdigit(argv[argi][0]))
+	if( argc > 1 && isdigit(argv[argi][0]) )
 	{
 		ignore_timesteps_after = atoi( argv[argi] );
 
@@ -138,11 +139,13 @@ int process_brainfunction(int argc, char *argv[])
 	}
 	else
 	{
-
 		for(int i = argi ; i < argc; i++)
 		{
 			for(char *c = argv[i]; *c != 0; c++)
 			{
+				if(isdigit(*c))
+					continue;
+				
 				char C = toupper(*c);
 
 				if(part_names.find(C) == part_names.end())
@@ -261,11 +264,11 @@ void Callback_bf::begin(CalcComplexity_brainfunction_parms *parms,
 
 	if(!bare)
 	{
-		printf("#AGENT-NUMBER LIFESPAN NUM-NEURONS");
+		printf("#  AGENT-NUMBER LIFESPAN NUM-NEURONS");
 
 		for(int i = 0; i < nparts_combos; i++)
 		  {
-		    printf("%10s ", parts_combos[i]);
+		    printf("%7s    ", parts_combos[i]);
 		  }
 
 		printf("PATH");

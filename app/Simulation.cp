@@ -226,12 +226,15 @@ TSimulation::TSimulation( TSceneView* sceneView, TSceneWindow* sceneWindow, cons
 
 		fSceneView(sceneView),
 		fSceneWindow(sceneWindow),
+		fOverheadWindow(NULL),
 		fBirthrateWindow(NULL),
 		fFitnessWindow(NULL),
 		fFoodEnergyWindow(NULL),
 		fPopulationWindow(NULL),
 		fBrainMonitorWindow(NULL),
 		fGeneSeparationWindow(NULL),
+		fAgentPOVWindow(NULL),
+		fTextStatusWindow(NULL),
 		fMaxSteps(0),
 		fPaused(false),
 		fDelay(0),
@@ -413,9 +416,6 @@ void TSimulation::Stop()
         delete[] fRecentFittest;
     }
 	
-	if( fLeastFit )
-		delete fLeastFit;
-
     Brain::braindestruct();
 
     agent::agentdestruct();
@@ -1339,13 +1339,24 @@ void TSimulation::End( const string &reason )
 
 	fConditionalProps->dispose();
 
-	// Stop simulation
 	printf( "Simulation stopped after step %ld\n", fStep );
 
-	ofstream fout( "run/endReason.txt" );
-	fout << reason << endl;
-	fout.close();
+	{
+		ofstream fout( "run/endStep.txt" );
+		fout << fStep << endl;
+		fout.close();
+	}
 
+	{
+		ofstream fout( "run/endReason.txt" );
+		fout << reason << endl;
+		fout.close();
+	}
+
+	// TODO: Clean up the dispose path.
+	// Deleting the SceneWindow deletes *this*.
+	delete fSceneWindow;
+	
 	exit( 0 );
 }
 
@@ -3505,7 +3516,7 @@ void TSimulation::DeathAndStats( void )
 		// if we are running in Lockstep with a LOCKSTEP-BirthDeaths.log, we kill our agents here.
 		if( fLockstepTimestep == fStep )
 		{
-			lsPrint( "t%d: Triggering %d random deaths...\n", fStep, fLockstepNumDeathsAtTimestep );
+			lsPrint( "t%ld: Triggering %d random deaths...\n", fStep, fLockstepNumDeathsAtTimestep );
 			
 			for( int count = 0; count < fLockstepNumDeathsAtTimestep; count++ )
 			{
@@ -3537,7 +3548,7 @@ void TSimulation::DeathAndStats( void )
 				
 				Kill( randAgent, LifeSpan::DR_LOCKSTEP );
 				
-				lsPrint( "- Killed agent %d, randomIndex = %d\n", randAgent->Number(), randomIndex );						
+				lsPrint( "- Killed agent %ld, randomIndex = %d\n", randAgent->Number(), randomIndex );						
 			}	// end of for loop
 		}	// end of if( fLockstepTimestep == fStep )
 	}
@@ -3743,7 +3754,7 @@ void TSimulation::DeathAndStats( void )
 //---------------------------------------------------------------------------
 void TSimulation::MateLockstep( void )
 {
-	lsPrint( "t%d: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
+	lsPrint( "t%ld: Triggering %d random births...\n", fStep, fLockstepNumBirthsAtTimestep );
 
 	agent* c = NULL;		// mommy
 	agent* d = NULL;		// daddy
@@ -4417,6 +4428,7 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	bool eatAllowed = true;
 	bool eatFailedYaw = false;
 	bool eatFailedVel = false;
+	bool eatFailedMinAge = false;
 	bool eatAttempted = false;
 
 	// Just to be slightly more like the old multi-x-sorted list version of the code, look backwards first
@@ -4442,6 +4454,11 @@ void TSimulation::Eat( agent *c, bool *cDied )
 	{
 		eatAllowed = false;
 		eatFailedYaw = true;
+	}
+	if( c->Age() < c->GetMetabolism()->minEatAge )
+	{
+		eatAllowed = false;
+		eatFailedMinAge = true;
 	}
 
 	// look for food in the -x direction
@@ -4553,18 +4570,21 @@ void TSimulation::Eat( agent *c, bool *cDied )
 
 	if( eatAttempted )
 	{
-		fEatStatistics.AgentEatAttempt( eatAllowed, eatFailedYaw, eatFailedVel );
+		fEatStatistics.AgentEatAttempt( eatAllowed, eatFailedYaw, eatFailedVel, eatFailedMinAge );
 	}
 
 	objectxsortedlist::gXSortedObjects.toMark( AGENTTYPE ); // point list back to c
-	if( c->GetEnergy().isDepleted() )
+	if( !fLockStepWithBirthsDeathsLog )
 	{
-		// note: this leaves list pointing to item before c, and markedAgent set to previous agent
-		Kill( c, LifeSpan::DR_EAT );
-		fNumberDiedEat++;
-		*cDied = true;
+		// If we're not running in LockStep mode, allow natural deaths
+		if( c->GetEnergy().isDepleted() )
+		{
+			// note: this leaves list pointing to item before c, and markedAgent set to previous agent
+			Kill( c, LifeSpan::DR_EAT );
+			fNumberDiedEat++;
+			*cDied = true;
+		}
 	}
-		
 	debugcheck( "after all agents had a chance to eat" );
 }
 
@@ -6835,6 +6855,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		proplib::Property &prop = doc.get( "BodyRedChannel" );
 		if( (string)prop == "Fight" )
 			agent::gBodyRedChannel = agent::BRC_FIGHT;
+		else if( (string)prop == "Give" )
+			agent::gBodyRedChannel = agent::BRC_GIVE;
 		else
 		{
 			agent::gBodyRedChannel = agent::BRC_CONST;
@@ -6857,6 +6879,8 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 		proplib::Property &prop = doc.get( "BodyBlueChannel" );
 		if( (string)prop == "Mate" )
 			agent::gBodyBlueChannel = agent::BBC_MATE;
+		else if( (string) prop == "Energy" )
+			agent::gBodyBlueChannel = agent::BBC_ENERGY;
 		else
 		{
 			agent::gBodyBlueChannel = agent::BBC_CONST;
@@ -6976,6 +7000,7 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 	}
 
     agent::gFight2Energy = doc.get( "EnergyUseFight" );
+    agent::gGive2Energy = doc.get( "EnergyUseGive" );
 	agent::gMinSizePenalty = doc.get( "MinSizeEnergyPenalty" );
     agent::gMaxSizePenalty = doc.get( "MaxSizeEnergyPenalty" );
     agent::gSpeed2Energy = doc.get( "EnergyUseMove" );
@@ -7349,7 +7374,100 @@ void TSimulation::ProcessWorldFile( proplib::Document *docWorldFile )
 
 			}
 
-			Metabolism::define( name, energyPolarity, *eatMultiplier, carcassFoodType );
+			float *minEatAge = new float[1];
+			{
+				proplib::Property &propMinEatAge = propMetabolism.get( "MinEatAge" );
+
+				proplib::Property &propConditions = propMinEatAge.get( "Conditions" );
+				condprop::ConditionList<float> *conditions = new condprop::ConditionList<float>();
+				int nconditions = propConditions.size();
+
+				for( int iCondition = 0; iCondition < nconditions; iCondition++ )
+				{
+					proplib::Property &propCondition = propConditions.get( iCondition );
+
+					CouplingRange couplingRange;
+					{
+						string role = propCondition.get( "CouplingRange" );
+						if( role == "Begin" )
+							couplingRange = COUPLING_RANGE__BEGIN;
+						else if( role == "End" )
+							couplingRange = COUPLING_RANGE__END;
+						else if( role == "None" )
+							couplingRange = COUPLING_RANGE__NONE;
+						else
+							assert( false );
+					}
+
+					float value = propCondition.get( "Value" );
+					string mode = propCondition.get( "Mode" );
+
+					condprop::Condition<float> *condition;
+					if( mode == "Time" )
+					{
+						long step = propCondition.get( "Time" );
+						condition = new condprop::TimeCondition<float>( step, value, couplingRange );
+					}
+					else if( mode == "Count" )
+					{
+						proplib::Property &propCount = propCondition.get( "Count" );
+						string countValue = propCount.get( "Value" );
+						string opname = propCount.get( "Op" );
+						long threshold = propCount.get( "Threshold" );
+						long duration = propCount.get( "Duration" );
+				
+						const long *countPtr;
+						if( countValue == "MetabolismAgents" )
+						{
+							countPtr = &( fNumberAliveWithMetabolism[iMetabolism] );
+						}
+						else
+							assert( false );
+
+						condprop::ThresholdCondition<float,long>::Op op;
+						if( opname == "EQ" )
+							op = condprop::ThresholdCondition<float,long>::EQ;
+						else if( opname == "LT" )
+							op = condprop::ThresholdCondition<float,long>::LT;
+						else if( opname == "GT" )
+							op = condprop::ThresholdCondition<float,long>::GT;
+						else
+							assert( false );
+
+						condition = new condprop::ThresholdCondition<float,long>( countPtr,
+																				  op,
+																				  threshold,
+																				  duration,
+																				  value,
+																				  couplingRange );
+					}
+					else
+						assert( false );
+
+					conditions->add( condition );
+				}
+
+				condprop::Logger<float> *logger = NULL;
+				if( (bool)propMinEatAge.get( "Record" ) )
+				{
+					char buf[128];
+					sprintf( buf, "MinEatAge%d", iMetabolism );
+					logger = new condprop::ScalarLogger<float>( buf, datalib::FLOAT );
+				}
+
+				condprop::Property<float> *property =
+					new condprop::Property<float>( "MinEatAge",
+												 minEatAge,
+												 &condprop::InterpolateFunction_float,
+												 &condprop::DistanceFunction_float,
+												 conditions,
+												 logger );
+
+				fConditionalProps->add( property );
+
+			}
+
+			Metabolism::define( name, energyPolarity, *eatMultiplier, *minEatAge, carcassFoodType );
 		}
 
 		for( int i = 0; i < Metabolism::getNumberOfDefinitions(); i++ )
@@ -8471,22 +8589,22 @@ void TSimulation::PopulateStatusList(TStatusList& list)
 		list.push_back( strdup( t ) );
 	}
 
-	sprintf( t, "LifeSpan = %lu � %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
+	sprintf( t, "LifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanStats.mean() ), nint( fLifeSpanStats.stddev() ), (ulong) fLifeSpanStats.min(), (ulong) fLifeSpanStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "RecLifeSpan = %lu � %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
+	sprintf( t, "RecLifeSpan = %lu ± %lu [%lu, %lu]", nint( fLifeSpanRecentStats.mean() ), nint( fLifeSpanRecentStats.stddev() ), (ulong) fLifeSpanRecentStats.min(), (ulong) fLifeSpanRecentStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurons = %.1f � %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
+	sprintf( t, "CurNeurons = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronCountStats.mean(), fCurrentNeuronCountStats.stddev(), (ulong) fCurrentNeuronCountStats.min(), (ulong) fCurrentNeuronCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "NeurGroups = %.1f � %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
+	sprintf( t, "NeurGroups = %.1f ± %.1f [%lu, %lu]", fNeuronGroupCountStats.mean(), fNeuronGroupCountStats.stddev(), (ulong) fNeuronGroupCountStats.min(), (ulong) fNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurNeurGroups = %.1f � %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
+	sprintf( t, "CurNeurGroups = %.1f ± %.1f [%lu, %lu]", fCurrentNeuronGroupCountStats.mean(), fCurrentNeuronGroupCountStats.stddev(), (ulong) fCurrentNeuronGroupCountStats.min(), (ulong) fCurrentNeuronGroupCountStats.max() );
 	list.push_back( strdup( t ) );
 
-	sprintf( t, "CurSynapses = %.1f � %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
+	sprintf( t, "CurSynapses = %.1f ± %.1f [%lu, %lu]", fCurrentSynapseCountStats.mean(), fCurrentSynapseCountStats.stddev(), (ulong) fCurrentSynapseCountStats.min(), (ulong) fCurrentSynapseCountStats.max() );
 	list.push_back( strdup( t ) );
 
 	if( fRecordPerformanceStats )

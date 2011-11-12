@@ -42,8 +42,6 @@
 
 using namespace genome;
 
-#define gGive2Energy gFight2Energy
-
 #pragma mark -
 
 // UniformPopulationEnergyPenalty controls whether or not the population energy penalty
@@ -69,6 +67,7 @@ float		agent::gMaxAgentSize;
 float		agent::gEat2Energy;
 float		agent::gMate2Energy;
 float		agent::gFight2Energy;
+float		agent::gGive2Energy;
 float       agent::gMinSizePenalty;
 float		agent::gMaxSizePenalty;
 float		agent::gSpeed2Energy;
@@ -549,6 +548,7 @@ void agent::grow( long mateWait,
 		fColor[0] = gBodyRedChannelConstValue;
 		break;
 	case BRC_FIGHT:
+	case BRC_GIVE:
 		// no-op
 		break;
 	default:
@@ -580,6 +580,7 @@ void agent::grow( long mateWait,
 		fColor[2] = gBodyBlueChannelConstValue;
 		break;
 	case BBC_MATE:
+	case BBC_ENERGY:
 		// no-op
 		break;
 	default:
@@ -1095,13 +1096,23 @@ float agent::UpdateBody( float moveFitnessParam,
 	{
 		SetRed( nerves.fight->get() );	// set red color according to desire to fight
 	}
+	else if( gBodyRedChannel == BRC_GIVE )
+	{
+		SetRed( nerves.give->get() );	// set red color according to desire to give
+	}
+
   	if( gBodyGreenChannel == BGC_LIGHT )
 	{
 		SetGreen(nerves.light->get());
 	}
+
 	if( gBodyBlueChannel == BBC_MATE )
 	{
 		SetBlue( nerves.mate->get() ); 	// set blue color according to desire to mate
+	}
+	else if( gBodyBlueChannel == BBC_ENERGY )
+	{
+		SetBlue( 1 - NormalizedEnergy() );
 	}
 
 	if( gNoseColor == NC_LIGHT )

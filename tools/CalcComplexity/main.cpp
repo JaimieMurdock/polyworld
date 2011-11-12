@@ -63,10 +63,11 @@ void show_usage(string msg)
 	cerr << endl;
 	cerr << "--- Brain Function ---" << endl;
 
-	cout << "CalcComplexity brainfunction [--bare] (<func_file> | --list <func_file>... --) [N] [[APIBH]+]..." << endl;
-	cout << "\tThe first argument is the brainFunction file to compute the complexity for.\n\t\tBoth complete and incomplete brainFunction files are supported." << endl;
-	cerr << "\tThe 2nd argument is optional, and is the number of timesteps since the beginning\n\t\tof the agent's life to compute the Complexity over.\n\t\tEx: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl; 
-	cerr << "\tThe 3rd argument is optional, and can be 'A', 'P', 'I', 'B', 'H' or any meaningful combination thereof.\n\t\tIt specifies whether you want to compute the Complexity of All, Processing, Input, Behavior, or Health+Behavior neurons.\n\t\tBy default it computes the Complexity for A, P, I, B, and HB." << endl; 
+	cout << "CalcComplexity brainfunction [--bare] (<func_file> | --list <func_file>... --) [N] [[APIBH]+\\d*]..." << endl;
+	cout << "\t(Ignoring --bare...)" << endl;
+	cout << "\tThe 1st argument is the brainFunction file (or list of files) to compute the complexity for.\n\t\tBoth complete and incomplete brainFunction files are supported." << endl;
+	cout << "\tThe 2nd argument is optional, and is the number of timesteps since the beginning\n\t\tof the agent's life to compute the Complexity over.\n\t\tEx: a value of 100 will compute Complexity across the first 100 steps of the agent's life." << endl; 
+	cerr << "\tThe 3rd argument is optional, and can be 'A', 'P', 'I', 'B', 'H' or any meaningful combination thereof.\n\t\tIt specifies whether you want to compute the Complexity of All, Processing, Input, Behavior,\n\t\tor Health+Behavior neurons. By default it computes the Complexity for A, P, I, B, and HB.\n\t\tAny of the complexity types may have one or more digits appended to specify the number of\n\t\tpoints to use in integrating the area between the (k/N)I(X) and <I(X_k)> curves. If not specified,\n\t\tthe default is effectively 1 (one), which yields the traditional 'simplified TSE complexity'.\n\t\tA value of 0 (zero) will use all points (all values of k) thus yielding full TSE complexity." << endl;
 
 	cerr << endl;
 	cerr << "--- Motion ---" << endl;
